@@ -168,6 +168,7 @@ export async function getRelatedEventsByCategory({
 
     return { data: JSON.parse(JSON.stringify(events)), totalPages: Math.ceil(eventsCount / limit) }
   } catch (error) {
+    console.log(error)
     handleError(error)
   }
 }
