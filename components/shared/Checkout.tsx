@@ -7,6 +7,7 @@ import { checkoutOrder } from '@/lib/actions/order.actions';
 
 loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
+
 const Checkout = ({ event, userId }: { event: IEvent, userId: string }) => {
   useEffect(() => {
     // Check to see if this is a redirect back from Checkout
@@ -19,12 +20,12 @@ const Checkout = ({ event, userId }: { event: IEvent, userId: string }) => {
       console.log('Order canceled -- continue to shop around and checkout when you’re ready.');
     }
   }, []);
-
+// changes in price
   const onCheckout = async () => {
     const order = {
       eventTitle: event.title,
       eventId: event._id,
-      price: event.price,
+      price: Number(event.price),
       isFree: event.isFree,
       buyerId: userId
     }

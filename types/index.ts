@@ -107,7 +107,7 @@ export type CreateCategoryParams = {
 export type CheckoutOrderParams = {
   eventTitle: string
   eventId: string
-  price: string
+  price: number
   isFree: boolean
   buyerId: string
 }
@@ -118,6 +118,7 @@ export type CreateOrderParams = {
   buyerId: string
   totalAmount: string
   createdAt: Date
+  price: number // Ensure price is a number
 }
 
 export type GetOrdersByEventParams = {

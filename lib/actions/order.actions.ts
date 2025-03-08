@@ -7,14 +7,13 @@ import { handleError } from '../utils';
 import { connectToDatabase } from '../database';
 import Order from '../database/models/order.model';
 import Event from '../database/models/event.model';
-import {ObjectId} from 'mongodb';
+import { ObjectId } from 'mongodb';
 import User from '../database/models/user.model';
 
 export const checkoutOrder = async (order: CheckoutOrderParams) => {
-  console.log("Processing order for payment:", order);
-
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-  const price = order.isFree ? 0 : Number(order.price) * 100;
+
+  const price = order.isFree ? 0 : order.price * 100; // Ensure price is a number
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -23,9 +22,11 @@ export const checkoutOrder = async (order: CheckoutOrderParams) => {
           price_data: {
             currency: 'usd',
             unit_amount: price,
-            product_data: { name: order.eventTitle },
+            product_data: {
+              name: order.eventTitle
+            }
           },
-          quantity: 1,
+          quantity: 1
         },
       ],
       metadata: {
@@ -37,34 +38,42 @@ export const checkoutOrder = async (order: CheckoutOrderParams) => {
       cancel_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/`,
     });
 
-    console.log("Stripe session created:", session);
-    redirect(session.url!);
+    // console.log('Stripe session created:', session);
+
+    // Create order in the database after successful payment
+    await createOrder({
+      stripeId: session.id,
+      eventId: order.eventId,
+      buyerId: order.buyerId,
+      totalAmount: session.amount_total ? session.amount_total.toString() : '0',
+      createdAt: new Date(),
+      price: order.price, // Ensure price is a number
+    });
+
+    redirect(session.url!)
   } catch (error) {
-    console.log("Stripe error:", error);
+    console.error('Error during checkout:', error);
     throw error;
   }
-};
-
+}
 
 export const createOrder = async (order: CreateOrderParams) => {
   try {
-    console.log("Creating order with data:", order);
     await connectToDatabase();
-
+    
     const newOrder = await Order.create({
       ...order,
-      event: new ObjectId(order.eventId), // Ensure event is stored as ObjectId
-      buyer: new ObjectId(order.buyerId), // Ensure buyer is stored as ObjectId
+      event: order.eventId,
+      buyer: order.buyerId,
     });
 
-    console.log("Order saved in DB:", newOrder);
+    // console.log('Order created:', newOrder);
+
     return JSON.parse(JSON.stringify(newOrder));
   } catch (error) {
-    console.log("Error creating order:", error);
     handleError(error);
   }
-};
-
+}
 
 // GET ORDERS BY EVENT
 export async function getOrdersByEvent({ searchString, eventId }: GetOrdersByEventParams) {
@@ -125,15 +134,13 @@ export async function getOrdersByEvent({ searchString, eventId }: GetOrdersByEve
 // GET ORDERS BY USER
 export async function getOrdersByUser({ userId, limit = 3, page }: GetOrdersByUserParams) {
   try {
-    await connectToDatabase();
+    await connectToDatabase()
 
-    const skipAmount = (Number(page) - 1) * limit;
-    const conditions = { buyer: userId };
+    const skipAmount = (Number(page) - 1) * limit
+    const conditions = { buyer: userId }
 
-    // Log the conditions to debug
-    console.log("Fetching orders with conditions:", conditions);
-
-    const orders = await Order.find(conditions)
+    const orders = await Order.distinct('event._id')
+      .find(conditions)
       .sort({ createdAt: 'desc' })
       .skip(skipAmount)
       .limit(limit)
@@ -145,14 +152,12 @@ export async function getOrdersByUser({ userId, limit = 3, page }: GetOrdersByUs
           model: User,
           select: '_id firstName lastName',
         },
-      });
+      })
 
-    console.log(orders); // Add this line to log the fetched orders
+    const ordersCount = await Order.distinct('event._id').countDocuments(conditions)
 
-    const ordersCount = await Order.distinct('event._id').countDocuments(conditions);
-
-    return { data: JSON.parse(JSON.stringify(orders)), totalPages: Math.ceil(ordersCount / limit) };
+    return { data: JSON.parse(JSON.stringify(orders)), totalPages: Math.ceil(ordersCount / limit) }
   } catch (error) {
-    handleError(error);
+    handleError(error)
   }
 }
