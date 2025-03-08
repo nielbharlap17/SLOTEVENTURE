@@ -29,6 +29,7 @@ export async function POST(request: Request) {
       buyerId: metadata?.buyerId || '',
       totalAmount: amount_total ? (amount_total / 100).toString() : '0',
       createdAt: new Date(),
+      price: amount_total ? amount_total / 100 : 0, // Ensure price is a number
     }
 
     const newOrder = await createOrder(order)
