@@ -16,6 +16,9 @@ export const checkoutOrder = async (order: CheckoutOrderParams) => {
   const price = order.isFree ? 0 : order.price * 100; // Ensure price is a number
 
   try {
+    // Get the origin URL from the request or use the environment variable
+    const origin = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000';
+
     const session = await stripe.checkout.sessions.create({
       line_items: [
         {
@@ -34,8 +37,8 @@ export const checkoutOrder = async (order: CheckoutOrderParams) => {
         buyerId: order.buyerId,
       },
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/profile`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/`,
+      success_url: `${origin}/profile`,
+      cancel_url: `${origin}/`,
     });
 
     // console.log('Stripe session created:', session);
