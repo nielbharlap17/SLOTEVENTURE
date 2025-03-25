@@ -59,10 +59,15 @@ const Header = () => {
           </SignedIn>
 
           <SignedOut>
-            {/* Square Login Button */}
-            <Button asChild className="border-2 border-indigo-600 px-8 py-3 text-xl font-bold bg-transparent text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-lg">
-              <Link href="/sign-in">Login</Link>
-            </Button>
+            {/* Login and Sign Up Buttons */}
+            <div className="flex items-center gap-3">
+              <Button asChild className="border-2 border-indigo-600 px-6 py-3 text-xl font-bold bg-transparent text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-lg">
+                <Link href="/sign-in">Login</Link>
+              </Button>
+              <Button asChild className="border-2 border-indigo-600 px-6 py-3 text-xl font-bold bg-indigo-600 text-white hover:bg-transparent hover:text-indigo-600 transition-all shadow-lg">
+                <Link href="/sign-up">Sign Up</Link>
+              </Button>
+            </div>
           </SignedOut>
         </div>
       </div>

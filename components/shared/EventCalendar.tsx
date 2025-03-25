@@ -1,254 +1,479 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { IEvent } from '@/lib/database/models/event.model';
+import { getAllEvents } from '@/lib/actions/event.actions';
 import Link from 'next/link';
+import Image from 'next/image';
+import { formatDateTime, formatPrice, formatDate, AppError, handleAppError } from '@/lib/utils';
+import { Loader2, CalendarIcon, MapPin, Clock, Tag, AlertCircle, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ErrorDisplay } from './ErrorDisplay';
+import { useUser } from '@clerk/nextjs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Sample events data
-const sampleEvents = [
-  { id: 1, title: "Tech Conference 2024", date: new Date(2024, 2, 15), category: "Technology" },
-  { id: 2, title: "Music Festival", date: new Date(2024, 2, 21), category: "Entertainment" },
-  { id: 3, title: "Startup Networking", date: new Date(2024, 2, 16), category: "Business" },
-];
+// Interface for calendar event
+interface CalendarEvent {
+  _id: string;
+  title: string;
+  date: Date;
+  category: string;
+  imageUrl: string;
+  price: number;
+  isFree: boolean;
+  location?: string;
+  startDateTime?: Date;
+  endDateTime?: Date;
+  organizer?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+  };
+  isUserEvent?: boolean; // Flag to indicate if this is the user's own event
+}
 
 const EventCalendar = () => {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  
-  // Get current month and year
-  const monthYear = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
-  
-  // Navigate to previous month
-  const prevMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-  };
-  
-  // Navigate to next month
-  const nextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
-  };
-  
-  // Get days in month
-  const getDaysInMonth = (year: number, month: number) => {
-    return new Date(year, month + 1, 0).getDate();
-  };
-  
-  // Get day of week for first day of month (0 = Sunday, 1 = Monday, etc.)
-  const getFirstDayOfMonth = (year: number, month: number) => {
-    return new Date(year, month, 1).getDay();
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<AppError | null>(null);
+  const [selectedDateEvents, setSelectedDateEvents] = useState<CalendarEvent[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
+  const [monthEvents, setMonthEvents] = useState<CalendarEvent[]>([]);
+  const [viewMode, setViewMode] = useState<'myEvents' | 'allEvents'>('myEvents');
+  const { user, isLoaded: isUserLoaded } = useUser();
+
+  // Fetch events on component mount
+  useEffect(() => {
+    if (isUserLoaded && user) {
+      fetchEvents();
+    }
+  }, [isUserLoaded, user, viewMode]);
+
+  // Update filtered events when date or events change
+  useEffect(() => {
+    if (date) {
+      setSelectedDateEvents(getEventsForDate(date));
+      setMonthEvents(getEventsByMonth());
+    }
+    setUpcomingEvents(getUpcomingEvents());
+  }, [date, events]);
+
+  const fetchEvents = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Get all events
+      const eventsData = await getAllEvents({
+        query: '',
+        category: '',
+        limit: 100,
+        page: 1,
+      });
+      
+      // Transform event data to calendar format
+      if (eventsData && eventsData.data) {
+        const userFullName = `${user.firstName || ''} ${user.lastName || ''}`.trim().toLowerCase();
+        
+        // Map all events and mark user's own events
+        const calendarEvents = eventsData.data.map((event: IEvent) => {
+          const organizerFullName = `${event.organizer?.firstName || ''} ${event.organizer?.lastName || ''}`.trim().toLowerCase();
+          const isUserEvent = organizerFullName === userFullName;
+          
+          return {
+            _id: event._id || '',
+            title: event.title || 'Untitled Event',
+            date: new Date(event.startDateTime),
+            category: event.category?.name || 'Uncategorized',
+            imageUrl: event.imageUrl,
+            price: Number(event.price) || 0,
+            isFree: event.isFree || false,
+            location: event.location,
+            startDateTime: new Date(event.startDateTime),
+            endDateTime: new Date(event.endDateTime),
+            organizer: event.organizer,
+            isUserEvent: isUserEvent
+          };
+        });
+        
+        // Filter events based on view mode
+        const filteredEvents = viewMode === 'myEvents' 
+          ? calendarEvents.filter((event: { isUserEvent: boolean }) => event.isUserEvent)
+          : calendarEvents;
+        
+        setEvents(filteredEvents);
+        
+        // Initialize filtered events
+        if (date) {
+          setSelectedDateEvents(getEventsForDate(date, filteredEvents));
+          setMonthEvents(getEventsByMonth(date, filteredEvents));
+        }
+        setUpcomingEvents(getUpcomingEvents(filteredEvents));
+      } else {
+        setEvents([]);
+        setError(handleAppError(new Error('No events data returned from API')));
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      setEvents([]);
+      setError(handleAppError(error));
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   // Check if a date has events
   const hasEvents = (date: Date) => {
-    return sampleEvents.some(event => 
-      event.date.getDate() === date.getDate() && 
-      event.date.getMonth() === date.getMonth() && 
-      event.date.getFullYear() === date.getFullYear()
-    );
+    try {
+      return events.some(event => {
+        if (!event.date || isNaN(event.date.getTime())) return false;
+        
+        return event.date.getDate() === date.getDate() && 
+          event.date.getMonth() === date.getMonth() && 
+          event.date.getFullYear() === date.getFullYear();
+      });
+    } catch (error) {
+      console.error('Error checking for events:', error);
+      return false;
+    }
   };
   
   // Get events for selected date
-  const getEventsForDate = (date: Date) => {
-    return sampleEvents.filter(event => 
-      event.date.getDate() === date.getDate() && 
-      event.date.getMonth() === date.getMonth() && 
-      event.date.getFullYear() === date.getFullYear()
-    );
+  const getEventsForDate = (date: Date, eventsList = events) => {
+    try {
+      return eventsList.filter(event => {
+        if (!event.date || isNaN(event.date.getTime())) return false;
+        
+        return event.date.getDate() === date.getDate() && 
+          event.date.getMonth() === date.getMonth() && 
+          event.date.getFullYear() === date.getFullYear();
+      });
+    } catch (error) {
+      console.error('Error getting events for date:', error);
+      return [];
+    }
   };
   
   // Format date as string
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
+    try {
+      return format(date, 'MMMM d, yyyy');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
   };
   
-  // Generate calendar days
-  const generateCalendarDays = () => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    
-    const daysInMonth = getDaysInMonth(year, month);
-    const firstDayOfMonth = getFirstDayOfMonth(year, month);
-    
-    const prevMonthDays = getDaysInMonth(year, month - 1);
-    
-    const days = [];
-    
-    // Previous month days
-    for (let i = firstDayOfMonth - 1; i >= 0; i--) {
-      days.push({
-        day: prevMonthDays - i,
-        currentMonth: false,
-        date: new Date(year, month - 1, prevMonthDays - i)
-      });
-    }
-    
-    // Current month days
-    for (let i = 1; i <= daysInMonth; i++) {
-      const date = new Date(year, month, i);
-      days.push({
-        day: i,
-        currentMonth: true,
-        date,
-        hasEvents: hasEvents(date),
-        isToday: new Date().toDateString() === date.toDateString(),
-        isSelected: selectedDate.toDateString() === date.toDateString()
-      });
-    }
-    
-    // Next month days
-    const remainingDays = 42 - days.length; // 6 rows of 7 days
-    for (let i = 1; i <= remainingDays; i++) {
-      days.push({
-        day: i,
-        currentMonth: false,
-        date: new Date(year, month + 1, i)
-      });
-    }
-    
-    return days;
-  };
-  
-  const calendarDays = generateCalendarDays();
-  const selectedDateEvents = getEventsForDate(selectedDate);
-  
-  return (
-    <section className="py-16 bg-white">
-      <div className="wrapper">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900">Upcoming Events</h2>
-          <p className="text-2xl font-medium text-indigo-600 mt-2">Plan Your Schedule</p>
-        </div>
+  // Get upcoming events (next 7 days)
+  const getUpcomingEvents = (eventsList = events) => {
+    try {
+      const today = new Date();
+      const nextWeek = new Date();
+      nextWeek.setDate(today.getDate() + 7);
+      
+      return eventsList.filter(event => {
+        if (!event.date || isNaN(event.date.getTime())) return false;
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Calendar */}
-          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
-            <h3 className="text-xl font-bold mb-2">Event Calendar</h3>
-            <p className="text-gray-600 mb-4">Browse and discover events by date</p>
-            
-            <div className="flex items-center justify-between mb-6">
-              <button 
-                onClick={prevMonth}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <h4 className="text-lg font-semibold">{monthYear}</h4>
-              <button 
-                onClick={nextMonth}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, index) => (
-                <div key={index} className="text-center font-medium text-gray-600 py-2">
-                  {day}
-                </div>
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1">
-              {calendarDays.map((day, index) => (
-                <div
-                  key={index}
-                  onClick={() => setSelectedDate(day.date)}
-                  className={`
-                    relative min-h-[80px] p-2 rounded-md border border-gray-100
-                    ${!day.currentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white text-gray-800'}
-                    ${day.isToday ? 'border-indigo-300' : ''}
-                    ${day.isSelected ? 'ring-2 ring-indigo-500' : ''}
-                    hover:bg-gray-50 cursor-pointer transition-colors
-                  `}
-                >
-                  <div className="flex justify-between items-start">
-                    <span className={`text-sm font-medium ${day.isToday ? 'text-indigo-600' : ''}`}>
-                      {day.day}
-                    </span>
-                    {day.hasEvents && (
-                      <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
-                    )}
-                  </div>
-                  
-                  {day.hasEvents && day.currentMonth && (
-                    <div className="mt-1 space-y-1 max-h-[50px] overflow-hidden">
-                      {getEventsForDate(day.date).slice(0, 2).map((event, eventIndex) => (
-                        <div 
-                          key={eventIndex} 
-                          className="text-xs p-1 rounded bg-indigo-50 text-indigo-700 truncate"
-                        >
-                          {event.title}
-                        </div>
-                      ))}
-                      {getEventsForDate(day.date).length > 2 && (
-                        <div className="text-xs text-gray-500 pl-1">
-                          +{getEventsForDate(day.date).length - 2} more
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            
-            <div className="mt-6 flex items-center justify-center text-gray-500 text-sm">
-              <Calendar className="h-4 w-4 mr-2" />
-              <span>Select a date to view events</span>
-            </div>
+        return event.date >= today && event.date <= nextWeek;
+      }).sort((a, b) => {
+        if (!a.date || !b.date || isNaN(a.date.getTime()) || isNaN(b.date.getTime())) return 0;
+        return a.date.getTime() - b.date.getTime();
+      });
+    } catch (error) {
+      console.error('Error getting upcoming events:', error);
+      return [];
+    }
+  };
+
+  // Function to get events by month
+  const getEventsByMonth = (selectedDate = date, eventsList = events) => {
+    try {
+      if (!selectedDate) return [];
+      
+      const currentMonth = selectedDate.getMonth();
+      const currentYear = selectedDate.getFullYear();
+      
+      return eventsList.filter(event => {
+        if (!event.date || isNaN(event.date.getTime())) return false;
+        
+        return event.date.getMonth() === currentMonth && 
+               event.date.getFullYear() === currentYear;
+      }).sort((a, b) => {
+        if (!a.date || !b.date || isNaN(a.date.getTime()) || isNaN(b.date.getTime())) return 0;
+        return a.date.getTime() - b.date.getTime();
+      });
+    } catch (error) {
+      console.error('Error getting events by month:', error);
+      return [];
+    }
+  };
+
+  // Function to handle date selection
+  const handleDateSelect = (newDate: Date | undefined) => {
+    setDate(newDate);
+    if (newDate) {
+      setSelectedDateEvents(getEventsForDate(newDate));
+    } else {
+      setSelectedDateEvents([]);
+    }
+  };
+
+  // Function to render event card
+  const renderEventCard = (event: CalendarEvent) => {
+    return (
+      <Card key={event._id} className={`mb-4 overflow-hidden hover:shadow-md transition-shadow ${event.isUserEvent ? 'border-l-4 border-primary-500' : ''}`}>
+        <div className="flex flex-col sm:flex-row">
+          <div className="relative w-full sm:w-1/3 h-40">
+            {event.imageUrl ? (
+              <Image 
+                src={event.imageUrl} 
+                alt={event.title}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                <CalendarIcon className="h-10 w-10 text-gray-400" />
+              </div>
+            )}
+            <Badge className="absolute top-2 right-2 bg-primary-500">
+              {event.category}
+            </Badge>
+            {event.isUserEvent && (
+              <Badge className="absolute top-2 left-2 bg-green-600">
+                My Event
+              </Badge>
+            )}
           </div>
           
-          {/* Events for selected date */}
-          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
-            <h3 className="text-xl font-bold mb-2">Events on Selected Date</h3>
-            <p className="text-gray-600 mb-6">Events for {formatDate(selectedDate)}</p>
+          <div className="flex-1 p-4">
+            <CardHeader className="p-0 pb-2">
+              <CardTitle className="text-xl font-bold line-clamp-1">
+                <Link href={`/events/${event._id}`} className="hover:text-primary-500 transition-colors">
+                  {event.title}
+                </Link>
+              </CardTitle>
+              <CardDescription>
+                <div className="flex items-center text-gray-500 mt-1">
+                  <Clock className="h-4 w-4 mr-1" />
+                  {event.startDateTime && formatDateTime(event.startDateTime).dateTime}
+                </div>
+                {event.location && (
+                  <div className="flex items-center text-gray-500 mt-1">
+                    <MapPin className="h-4 w-4 mr-1" />
+                    {event.location}
+                  </div>
+                )}
+                {event.organizer && (
+                  <div className="flex items-center text-gray-500 mt-1">
+                    <User className="h-4 w-4 mr-1" />
+                    {`${event.organizer.firstName} ${event.organizer.lastName}`}
+                  </div>
+                )}
+              </CardDescription>
+            </CardHeader>
             
-            <div className="min-h-[300px]">
-              {selectedDateEvents.length > 0 ? (
-                <div className="space-y-4">
-                  {selectedDateEvents.map((event) => (
-                    <div key={event.id} className="p-4 border border-gray-100 rounded-lg hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-semibold text-lg">{event.title}</h4>
-                          <p className="text-gray-500 text-sm">{formatDate(event.date)}</p>
-                        </div>
-                        <span className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-full">
-                          {event.category}
-                        </span>
-                      </div>
-                      <div className="mt-4 flex justify-end">
-                        <Button asChild size="sm" variant="outline" className="mr-2">
-                          <Link href={`/events/${event.id}`}>View Details</Link>
-                        </Button>
-                        <Button asChild size="sm">
-                          <Link href={`/events/${event.id}/register`}>Register</Link>
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <p className="text-gray-500 mb-6">No events scheduled for this date</p>
-                  <Button asChild className="bg-indigo-600 hover:bg-indigo-700">
-                    <Link href="/events/create">Create an event</Link>
-                  </Button>
-                </div>
-              )}
+            <CardFooter className="p-0 pt-2 flex justify-between items-center">
+              <div>
+                {event.isFree ? (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    Free
+                  </Badge>
+                ) : (
+                  <p className="font-semibold text-primary-500">
+                    {formatPrice(String(event.price * 100))}
+                  </p>
+                )}
+              </div>
+              <Button asChild size="sm" className="rounded-full">
+                <Link href={`/events/${event._id}`}>
+                  View Details
+                </Link>
+              </Button>
+            </CardFooter>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  // Function to render skeleton loader for events
+  const renderEventSkeletons = (count: number) => {
+    return Array(count).fill(0).map((_, index) => (
+      <Card key={`skeleton-${index}`} className="mb-4 overflow-hidden">
+        <div className="flex flex-col sm:flex-row">
+          <Skeleton className="w-full sm:w-1/3 h-40" />
+          <div className="flex-1 p-4">
+            <Skeleton className="h-6 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-1/2 mb-1" />
+            <Skeleton className="h-4 w-1/3 mb-3" />
+            <div className="flex justify-between">
+              <Skeleton className="h-6 w-16" />
+              <Skeleton className="h-8 w-24 rounded-full" />
+            </div>
+          </div>
+        </div>
+      </Card>
+    ));
+  };
+
+  // Function to refresh events data
+  const refreshEvents = () => {
+    fetchEvents();
+  };
+
+  // Toggle between My Events and All Events views
+  const handleViewModeChange = (value: string) => {
+    setViewMode(value as 'myEvents' | 'allEvents');
+  };
+
+  return (
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      {error && (
+        <ErrorDisplay 
+          error={error} 
+          onClose={() => setError(null)}
+        />
+      )}
+      
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Calendar Column */}
+        <div className="lg:col-span-5">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Event Calendar</h2>
+              <Button 
+                asChild 
+                size="sm" 
+                className="bg-primary-600 hover:bg-primary-700 text-white"
+              >
+                <Link href="/events/create">
+                  Create Event
+                </Link>
+              </Button>
+            </div>
+
+            <Tabs defaultValue="myEvents" className="mb-6" onValueChange={handleViewModeChange}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="myEvents">My Events</TabsTrigger>
+                <TabsTrigger value="allEvents">All Events</TabsTrigger>
+              </TabsList>
+              <TabsContent value="myEvents">
+                <p className="text-sm text-gray-500 mb-4">Showing only events you've created</p>
+              </TabsContent>
+              <TabsContent value="allEvents">
+                <p className="text-sm text-gray-500 mb-4">Showing events from all organizers</p>
+              </TabsContent>
+            </Tabs>
+            
+            <div className="flex justify-center">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={handleDateSelect}
+                className="rounded-md border w-full max-w-md"
+                modifiers={{
+                  hasEvent: hasEvents
+                }}
+                modifiersClassNames={{
+                  hasEvent: 'bg-primary-100 font-bold text-primary-600 hover:bg-primary-200'
+                }}
+                classNames={{
+                  month: "space-y-4",
+                  caption: "flex justify-center pt-1 relative items-center",
+                  caption_label: "text-sm font-medium",
+                  nav: "space-x-1 flex items-center",
+                  nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+                  nav_button_previous: "absolute left-1",
+                  nav_button_next: "absolute right-1",
+                  table: "w-full border-collapse space-y-1",
+                  head_row: "flex justify-between w-full",
+                  head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] md:text-sm",
+                  row: "flex w-full mt-2 justify-between",
+                  cell: "text-center text-sm md:text-base p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                  day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-md",
+                  day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                  day_today: "bg-accent text-accent-foreground",
+                  day_outside: "text-muted-foreground opacity-50",
+                  day_disabled: "text-muted-foreground opacity-50",
+                  day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                  day_hidden: "invisible",
+                }}
+              />
+            </div>
+            
+            <div className="text-center mt-6">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={refreshEvents}
+                className="w-full py-2 hover:bg-primary-50"
+              >
+                Refresh Events
+              </Button>
             </div>
           </div>
         </div>
         
-        <div className="mt-12 text-center">
-          <Button asChild className="bg-indigo-600 hover:bg-indigo-700 px-8 py-3 rounded-lg text-white font-semibold shadow-lg hover:shadow-xl transition-all">
-            <Link href="/events/calendar">View Full Calendar</Link>
-          </Button>
+        {/* Events Column */}
+        <div className="lg:col-span-7">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold mb-6 text-gray-800">
+              {date ? (
+                <>{viewMode === 'myEvents' ? 'My' : 'All'} Events on {date && formatDate(date)}</>
+              ) : (
+                'Select a date to view events'
+              )}
+            </h2>
+            
+            {isLoading ? (
+              <div className="space-y-4">
+                {renderEventSkeletons(3)}
+              </div>
+            ) : selectedDateEvents.length > 0 ? (
+              <div className="space-y-4">
+                {selectedDateEvents.map(event => renderEventCard(event))}
+              </div>
+            ) : (
+              <div className="text-center py-8 bg-gray-50 rounded-lg">
+                <CalendarIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-semibold mb-2 text-gray-700">
+                  No {viewMode === 'myEvents' ? 'personal' : ''} events on this date
+                </h3>
+                
+                {upcomingEvents.length > 0 ? (
+                  <div className="mt-8">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-700">
+                      {viewMode === 'myEvents' ? 'Your' : 'Upcoming'} events
+                    </h3>
+                    <div className="space-y-4">
+                      {upcomingEvents.map(event => renderEventCard(event))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <p className="text-gray-500 mb-4">
+                      {viewMode === 'myEvents' 
+                        ? "You haven't created any upcoming events" 
+                        : "No upcoming events found"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 
-export default EventCalendar; 
+export default EventCalendar;

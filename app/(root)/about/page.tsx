@@ -98,8 +98,8 @@ const AboutPage = () => {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-2xl mx-auto">
             {[
-              { name: 'Nimesh Jaiswal', role: 'Founder & CEO', image: '/assets/images/placeholder.png' },
-              { name: 'Nilesh Bharati', role: 'Co-Founder', image: '/assets/images/placeholder.png' },
+              { name: 'Nimesh Jaiswal', role: 'Founder & CEO', image: '/assets/images/placeholder1.jpg' },
+              { name: 'Nilesh Bharati', role: 'Co-Founder', image: '/assets/images/placeholder.jpg' },
             ].map((member, index) => (
               <div key={index} className="text-center group">
                 <div className="relative w-48 h-48 mx-auto mb-4 rounded-full overflow-hidden group-hover:scale-105 transition-transform duration-300">

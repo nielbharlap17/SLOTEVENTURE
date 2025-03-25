@@ -132,6 +132,28 @@ export type GetOrdersByUserParams = {
   page: string | number | null
 }
 
+// ====== REVIEW PARAMS
+export type CreateReviewParams = {
+  userId: string
+  eventId: string
+  quote: string
+  rating: number
+  role?: string
+  bgColor?: string
+}
+
+export type GetReviewsByEventParams = {
+  eventId: string
+  limit?: number
+  page: number | string
+}
+
+export type GetReviewsByUserParams = {
+  userId: string
+  limit?: number
+  page: number | string
+}
+
 // ====== URL QUERY PARAMS
 export type UrlQueryParams = {
   params: string
@@ -147,4 +169,5 @@ export type RemoveUrlQueryParams = {
 export type SearchParamProps = {
   params: { id: string }
   searchParams: { [key: string]: string | string[] | undefined }
+  userId?: string
 }

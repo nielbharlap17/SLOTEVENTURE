@@ -14,7 +14,7 @@ const allBlogPosts = [
     date: "March 15, 2024",
     author: "Priya Patel",
     category: "Virtual Events",
-    image: "/assets/images/test.png",
+    image: "/assets/images/virtual.jpg",
     readTime: "5 min read"
   },
   {
@@ -24,7 +24,7 @@ const allBlogPosts = [
     date: "March 10, 2024",
     author: "Rahul Sharma",
     category: "Technology",
-    image: "/assets/images/test-2.png",
+    image: "/assets/images/technology.jpg",
     readTime: "7 min read"
   },
   {
@@ -34,7 +34,7 @@ const allBlogPosts = [
     date: "March 5, 2024",
     author: "Neha Singh",
     category: "Planning",
-    image: "/assets/images/placeholder.png",
+    image: "/assets/images/planning.jpg",
     readTime: "6 min read"
   },
   {
@@ -44,7 +44,7 @@ const allBlogPosts = [
     date: "February 28, 2024",
     author: "Amit Kumar",
     category: "Sustainability",
-    image: "/assets/images/hero.png",
+    image: "/assets/images/sustainability.jpg",
     readTime: "8 min read"
   },
   {
@@ -74,7 +74,7 @@ const allBlogPosts = [
     date: "February 15, 2024",
     author: "Riya Sharma",
     category: "Networking",
-    image: "/assets/images/placeholder.png",
+    image: "/assets/images/networking.jpg",
     readTime: "6 min read"
   },
   {
@@ -84,7 +84,7 @@ const allBlogPosts = [
     date: "February 10, 2024",
     author: "Arjun Kapoor",
     category: "Design",
-    image: "/assets/images/hero.png",
+    image: "/assets/images/Psychology.jpg",
     readTime: "8 min read"
   },
   {
@@ -94,7 +94,7 @@ const allBlogPosts = [
     date: "February 5, 2024",
     author: "Rajiv Singh",
     category: "Security",
-    image: "/assets/images/test.png",
+    image: "/assets/images/security.jpg",
     readTime: "10 min read"
   },
   {
@@ -114,7 +114,7 @@ const allBlogPosts = [
     date: "January 25, 2024",
     author: "Aditya Sharma",
     category: "Sponsorship",
-    image: "/assets/images/placeholder.png",
+    image: "/assets/images/budget.jpg",
     readTime: "7 min read"
   },
   {
@@ -124,7 +124,7 @@ const allBlogPosts = [
     date: "January 20, 2024",
     author: "Pooja Verma",
     category: "Accessibility",
-    image: "/assets/images/hero.png",
+    image: "/assets/images/accessibility.jpg",
     readTime: "8 min read"
   },
 ];
@@ -155,6 +155,12 @@ const AllArticlesPage = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const postsPerPage = 6; // Show 6 posts per page
+
+  // Newsletter subscription state
+  const [email, setEmail] = useState("");
+  const [subscriptionStatus, setSubscriptionStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [subscriptionError, setSubscriptionError] = useState("");
+  const [isImageHovered, setIsImageHovered] = useState(false);
 
   // Apply filters, sorting, and search whenever dependencies change
   useEffect(() => {
@@ -214,6 +220,39 @@ const AllArticlesPage = () => {
     setCurrentPage(pageNumber);
     // Scroll to top of the page when changing pages
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Handle email input change
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+  };
+
+  // Handle newsletter subscription
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Basic email validation
+    if (!email || !email.includes('@') || !email.includes('.')) {
+      setSubscriptionStatus("error");
+      setSubscriptionError("Please enter a valid email address");
+      return;
+    }
+    
+    // Set loading state
+    setSubscriptionStatus("loading");
+    
+    // Simulate API call with timeout
+    setTimeout(() => {
+      // In a real app, you would make an API call to your backend here
+      // For demo purposes, we'll just simulate a successful subscription
+      setSubscriptionStatus("success");
+      setEmail(""); // Clear the input after successful subscription
+      
+      // Reset status after 5 seconds
+      setTimeout(() => {
+        setSubscriptionStatus("idle");
+      }, 5000);
+    }, 1500);
   };
 
   // Calculate pagination values
@@ -433,25 +472,69 @@ const AllArticlesPage = () => {
                 <p className="text-gray-600 mb-6">
                   Subscribe to our newsletter and never miss out on the latest event planning tips, trends, and insights.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input 
-                    type="email" 
-                    placeholder="Your email address" 
-                    className="px-4 py-3 rounded-lg flex-grow text-gray-800 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white font-medium">
-                    Subscribe
-                  </Button>
-                </div>
+                
+                {subscriptionStatus === "success" ? (
+                  <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4 flex items-center">
+                    <svg className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span>Thank you for subscribing! Check your email for confirmation.</span>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-grow relative">
+                      <input 
+                        type="email" 
+                        placeholder="Your email address" 
+                        className={`px-4 py-3 rounded-lg w-full text-gray-800 border ${
+                          subscriptionStatus === "error" ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+                        } focus:outline-none focus:ring-2`}
+                        value={email}
+                        onChange={handleEmailChange}
+                        disabled={subscriptionStatus === "loading"}
+                      />
+                      {subscriptionStatus === "error" && (
+                        <p className="text-red-500 text-sm mt-1">{subscriptionError}</p>
+                      )}
+                    </div>
+                    <Button 
+                      type="submit"
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                      disabled={subscriptionStatus === "loading"}
+                    >
+                      {subscriptionStatus === "loading" ? (
+                        <div className="flex items-center">
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Subscribing...</span>
+                        </div>
+                      ) : "Subscribe"}
+                    </Button>
+                  </form>
+                )}
               </div>
-              <div className="md:w-1/2 relative h-48 md:h-64 w-full">
+              <div 
+                className="md:w-1/2 relative h-48 md:h-64 w-full overflow-hidden rounded-lg transition-transform duration-500 ease-in-out"
+                onMouseEnter={() => setIsImageHovered(true)}
+                onMouseLeave={() => setIsImageHovered(false)}
+              >
+                <div className={`absolute inset-0 bg-gradient-to-r from-blue-600/40 to-indigo-600/40 rounded-lg z-10 transition-opacity duration-300 ${isImageHovered ? 'opacity-30' : 'opacity-60'}`}></div>
+                
                 <Image 
                   src="/assets/images/placeholder.png" 
                   alt="Newsletter" 
                   fill 
-                  className="object-cover rounded-lg"
+                  className={`object-cover rounded-lg transition-transform duration-700 ease-in-out ${isImageHovered ? 'scale-110' : 'scale-100'}`}
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/40 to-indigo-600/40 rounded-lg"></div>
+                
+                <div className={`absolute inset-0 flex items-center justify-center z-20 transition-opacity duration-300 ${isImageHovered ? 'opacity-100' : 'opacity-0'}`}>
+                  <div className="bg-white/80 backdrop-blur-sm px-4 py-3 rounded-lg text-center transform transition-transform duration-300 ease-in-out">
+                    <p className="font-medium text-blue-700">Join our community</p>
+                    <p className="text-sm text-gray-700">Get exclusive content</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

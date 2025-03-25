@@ -64,7 +64,7 @@ const TestimonialForm = ({ onClose, onSuccess }: TestimonialFormProps) => {
     }
     
     if (!userRole.trim()) {
-      setSubmissionStatus('Please enter your role');
+      setSubmissionStatus('Please enter your event');
       return;
     }
     
@@ -215,12 +215,12 @@ const TestimonialForm = ({ onClose, onSuccess }: TestimonialFormProps) => {
         
         <div className="group">
           <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1 group-focus-within:text-indigo-600 transition-colors">
-            Your Role
+            Your Event
           </label>
           <input
             id="role"
             type="text"
-            placeholder="e.g., Event Organizer, Attendee, Student..."
+            placeholder="e.g., Music, Birthday Party, Conference...."
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm hover:shadow-md"
             value={userRole}
             onChange={(e) => setUserRole(e.target.value)}

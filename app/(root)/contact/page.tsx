@@ -92,7 +92,7 @@ const ContactPage = () => {
             
             <div>
               <h3 className="font-bold">Address</h3>
-              <p>123 Event Street<br />Suite 456<br />New York, NY 10001</p>
+              <p>New India Chamber, <br />Off Mahakali Caves Rd,<br />Andheri East, Mumbai, Maharashtra 400093</p>
             </div>
           </div>
         </div>
