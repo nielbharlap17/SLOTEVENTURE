@@ -22,21 +22,30 @@ const Checkout = ({ event, userId }: { event: IEvent, userId: string }) => {
   }, []);
 // changes in price
   const onCheckout = async () => {
-    const order = {
-      eventTitle: event.title,
-      eventId: event._id,
-      price: Number(event.price),
-      isFree: event.isFree,
-      buyerId: userId
-    }
+    try {
+      const order = {
+        eventTitle: event?.title,
+        eventId: event?._id,
+        price: Number(event?.price),
+        isFree: event?.isFree,
+        buyerId: userId
+      }
 
-    await checkoutOrder(order);
+      const response = await checkoutOrder(order);
+      
+      // If we have a URL from the response, redirect to it
+      if (response?.url) {
+        window.location.href = response.url;
+      }
+    } catch (error) {
+      console.error('Error during checkout:', error);
+    }
   }
 
   return (
-    <form action={onCheckout} method="post">
+    <form action="" onSubmit={(e) => {e.preventDefault(); onCheckout()}} method="post">
       <Button type="submit" role="link" size="lg" className="button sm:w-fit">
-        {event.isFree ? 'Get Ticket' : 'Buy Ticket'}
+        {event?.isFree ? 'Get Ticket' : 'Buy Ticket'}
       </Button>
     </form>
   )

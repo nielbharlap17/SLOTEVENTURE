@@ -7,6 +7,15 @@ const UserSchema = new Schema({
   firstName: { type: String, required: true },
   lastName: {type: String, required: true },
   photo: { type: String, required: true },
+  friends: [{ 
+    type: Schema.Types.ObjectId, 
+    ref: 'User' 
+  }],
+  friendRequests: [{
+    from: { type: Schema.Types.ObjectId, ref: 'User' },
+    status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
+    createdAt: { type: Date, default: Date.now }
+  }]
 })
 
 const User = models.User || model('User', UserSchema);

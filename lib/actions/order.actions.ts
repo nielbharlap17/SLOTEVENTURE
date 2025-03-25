@@ -50,7 +50,12 @@ export const checkoutOrder = async (order: CheckoutOrderParams) => {
       price: order.price, // Ensure price is a number
     });
 
-    redirect(session.url!)
+    // Check if session.url exists before redirecting
+    if (session.url) {
+      return { url: session.url };
+    } else {
+      throw new Error('Failed to create checkout session URL');
+    }
   } catch (error) {
     console.error('Error during checkout:', error);
     throw error;
@@ -66,8 +71,6 @@ export const createOrder = async (order: CreateOrderParams) => {
       event: order.eventId,
       buyer: order.buyerId,
     });
-
-    // console.log('Order created:', newOrder);
 
     return JSON.parse(JSON.stringify(newOrder));
   } catch (error) {
@@ -139,8 +142,11 @@ export async function getOrdersByUser({ userId, limit = 3, page }: GetOrdersByUs
     const skipAmount = (Number(page) - 1) * limit
     const conditions = { buyer: userId }
 
-    const orders = await Order.distinct('event._id')
-      .find(conditions)
+    // First get distinct event IDs for this user
+    const distinctEventIds = await Order.distinct('event', conditions);
+    
+    // Then query for those specific events with proper pagination
+    const orders = await Order.find(conditions)
       .sort({ createdAt: 'desc' })
       .skip(skipAmount)
       .limit(limit)
@@ -154,9 +160,20 @@ export async function getOrdersByUser({ userId, limit = 3, page }: GetOrdersByUs
         },
       })
 
-    const ordersCount = await Order.distinct('event._id').countDocuments(conditions)
+    // Get unique orders by event ID
+    const uniqueOrders = [];
+    const eventIdSet = new Set();
+    
+    for (const order of orders) {
+      if (order.event && !eventIdSet.has(order.event._id.toString())) {
+        eventIdSet.add(order.event._id.toString());
+        uniqueOrders.push(order);
+      }
+    }
 
-    return { data: JSON.parse(JSON.stringify(orders)), totalPages: Math.ceil(ordersCount / limit) }
+    const ordersCount = distinctEventIds.length;
+
+    return { data: JSON.parse(JSON.stringify(uniqueOrders)), totalPages: Math.ceil(ordersCount / limit) }
   } catch (error) {
     handleError(error)
   }

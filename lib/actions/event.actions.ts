@@ -156,7 +156,11 @@ export async function getRelatedEventsByCategory({
     await connectToDatabase()
 
     const skipAmount = (Number(page) - 1) * limit
-    const conditions = { $and: [{ category: categoryId }, { _id: { $ne: eventId } }] }
+    
+    // If categoryId is empty, return random events excluding the current one
+    const conditions = categoryId 
+      ? { $and: [{ category: categoryId }, { _id: { $ne: eventId } }] }
+      : { _id: { $ne: eventId } };
 
     const eventsQuery = Event.find(conditions)
       .sort({ createdAt: 'desc' })
@@ -169,5 +173,6 @@ export async function getRelatedEventsByCategory({
     return { data: JSON.parse(JSON.stringify(events)), totalPages: Math.ceil(eventsCount / limit) }
   } catch (error) {
     handleError(error)
+    return { data: [], totalPages: 0 }
   }
 }

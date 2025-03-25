@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Poppins } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
+import { Toaster } from 'sonner'
 
 import './globals.css'
 
@@ -11,8 +12,8 @@ const poppins = Poppins({
 })
 
 export const metadata: Metadata = {
-  title: 'Evently',
-  description: 'Evently is a platform for event management.',
+  title: 'SlotEventure',
+  description: 'SlotEventure is a platform for event management.',
   icons: {
     icon: '/assets/images/logo.svg'
   }
@@ -26,7 +27,10 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={poppins.variable}>{children}</body>
+        <body className={poppins.variable}>
+          {children}
+          <Toaster position="top-center" richColors />
+        </body>
       </html>
     </ClerkProvider>
   )
