@@ -2,12 +2,16 @@ import CheckoutButton from '@/components/shared/CheckoutButton';
 import Collection from '@/components/shared/Collection';
 import { getEventById, getRelatedEventsByCategory } from '@/lib/actions/event.actions';
 import { formatDateTime } from '@/lib/utils';
-import { SearchParamProps } from '@/types';
 import { auth } from '@clerk/nextjs';
 import Image from 'next/image';
 
-const EventDetails = async ({ params: { id }, searchParams }: SearchParamProps) => {
-  const event = await getEventById(id);
+type EventPageProps = {
+  params: { id: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+const EventDetails = async ({ params, searchParams }: EventPageProps) => {
+  const event = await getEventById(params.id);
   const { userId } = auth();
 
   const relatedEvents = await getRelatedEventsByCategory({

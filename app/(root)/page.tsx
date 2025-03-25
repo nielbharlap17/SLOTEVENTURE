@@ -5,12 +5,15 @@ import Search from "@/components/shared/Search";
 import TestimonialsNew from "@/components/shared/TestimonialsNew";
 import { Button } from "@/components/ui/button";
 import { getAllEvents } from "@/lib/actions/event.actions";
-import { SearchParamProps } from "@/types";
 import Image from "next/image";
 import Link from "next/link";
-import FloatingObject from "@/components/shared/FloatingObject"; // ✅ Import Floating Object
+import FloatingObject from "@/components/shared/FloatingObject"; // Import Floating Object
 
-export default async function Home({ searchParams }: SearchParamProps) {
+type HomePageProps = {
+  searchParams: { [key: string]: string | string[] | undefined }
+}
+
+export default async function Home({ searchParams }: HomePageProps) {
   const page = Number(searchParams?.page) || 1;
   const searchText = (searchParams?.query as string) || "";
   const category = (searchParams?.category as string) || "";
@@ -27,7 +30,7 @@ export default async function Home({ searchParams }: SearchParamProps) {
       {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-blue-600 to-blue-400 py-10 md:py-20 text-white font-sans shadow-xl">
         
-        <FloatingObject /> {/* ✅ Floating Object added */}
+        <FloatingObject /> {/* Floating Object added */}
 
         <div className="wrapper grid grid-cols-1 gap-10 md:grid-cols-2">
           <div className="flex flex-col justify-center gap-6 text-white">
