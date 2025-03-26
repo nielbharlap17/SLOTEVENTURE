@@ -264,7 +264,7 @@ const TestimonialsNew = () => {
               {/* Navigation Buttons */}
               <button 
                 onClick={handlePrev}
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center text-gray-700 hover:bg-gray-100 transition-colors z-10 hover:scale-110 transition-transform"
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center text-gray-700 hover:bg-gray-100 transition-colors z-10 hover:scale-110"
                 aria-label="Previous testimonial"
               >
                 <ChevronLeft className="w-6 h-6" />
@@ -272,7 +272,7 @@ const TestimonialsNew = () => {
               
               <button 
                 onClick={handleNext}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center text-gray-700 hover:bg-gray-100 transition-colors z-10 hover:scale-110 transition-transform"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center text-gray-700 hover:bg-gray-100 transition-colors z-10 hover:scale-110"
                 aria-label="Next testimonial"
               >
                 <ChevronRight className="w-6 h-6" />

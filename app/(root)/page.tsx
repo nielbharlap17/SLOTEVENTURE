@@ -28,12 +28,12 @@ export default async function Home({ searchParams }: HomePageProps) {
   return (
     <>
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-blue-600 to-blue-400 py-10 md:py-20 text-white font-sans shadow-xl">
+      <section className="bg-gradient-to-r from-blue-50 to-indigo-100 py-20">
         
         <FloatingObject /> {/* Floating Object added */}
 
         <div className="wrapper grid grid-cols-1 gap-10 md:grid-cols-2">
-          <div className="flex flex-col justify-center gap-6 text-white">
+          <div className="flex flex-col justify-center gap-6">
             <h1 className="text-5xl font-extrabold leading-tight">
               Plan, Connect, <br /> Experience:{" "}
               <span className="text-yellow-400">
@@ -52,7 +52,7 @@ export default async function Home({ searchParams }: HomePageProps) {
               >
                 <Link href="#events">Explore Now</Link>
               </Button>
-              <Button size="lg" asChild variant="outline">
+              <Button size="lg" asChild variant="outline" className="text-black border-black">
                 <Link href="/events/create">Host an Event</Link>
               </Button>
             </div>
@@ -98,7 +98,9 @@ export default async function Home({ searchParams }: HomePageProps) {
       </section>
       
       {/* Testimonials Section */}
-      <TestimonialsNew />
+      <section className="wrapper my-12">
+        <TestimonialsNew />
+      </section>
       
       {/* Event Calendar Section */}
       <section className="wrapper my-12">
