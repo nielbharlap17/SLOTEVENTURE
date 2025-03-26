@@ -28,7 +28,7 @@ export default async function Home({ searchParams }: HomePageProps) {
   return (
     <>
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-50 to-indigo-100 py-20">
+      <section className="relative bg-gradient-to-r from-blue-600 to-blue-400 py-10 md:py-20 text-white font-sans shadow-xl">
         
         <FloatingObject /> {/* Floating Object added */}
 
